@@ -20,7 +20,6 @@
             $button: $(".extra-menu-button").first(),
             resizeEvent: 'resize',
             everySizes: true,
-            smallBreakpoint: false,
             smallBreakpointCondition: null,
             breakPointWidth: 960,
             autoHide: true,
@@ -38,6 +37,7 @@
             var $menu = $(this),
                 menuOpen = false,
                 $html = $('html'),
+                smallBreakpoint = false,
                 timeline,
                 $toMove;
 
@@ -45,12 +45,10 @@
             // show the menu
             // @fast : false = hide with animation, true = hide instantaneously
             function showMenu(fast) {
-                if ((opt.smallBreakpoint && !opt.everySizes) || opt.everySizes) {
-                    $menu.css('visibility', 'visible');
+                if ((smallBreakpoint && !opt.everySizes) || opt.everySizes) {
                     menuOpen = true;
                     $html.addClass('extra-menu-open');
                     $html.removeClass('extra-menu-close');
-                    $window.trigger('extra:menu:showStart');
                     if (fast) {
                         timeline.totalProgress(1);
                     } else {
@@ -67,12 +65,7 @@
                 menuOpen = false;
                 $html.removeClass('extra-menu-open');
                 $html.addClass('extra-menu-close');
-                if (!opt.smallBreakpoint && !opt.everySizes) {
-                    $menu.removeAttr("style");
-                    opt.$site.removeAttr("style");
-                    $menu.hide();
-                }
-                $window.trigger('extra:menu:hideStart');
+                $window.trigger('extra:menu:HideStart');
                 if (fast) {
                     timeline.totalProgress(0);
                 } else {
@@ -82,22 +75,10 @@
 
             // update the menu
             function update() {
-                if (opt.moveButton && opt.moveSite) {
-                    $toMove = [opt.$site, opt.$button];
-                } else if (opt.moveButton) {
-                    $toMove = opt.$button;
-                } else if (opt.moveSite) {
-                    $toMove = opt.$site;
-                } else {
-                    $toMove = null;
-                }
-                if (!small && !opt.everySizes) {
-                    $menu.removeAttr("style");
-                    opt.$site.removeAttr("style");
-                    $menu.hide();
+                if (!smallBreakpoint && !opt.everySizes) {
                     $html.removeClass('responsive-menu').addClass('no-responsive-menu');
                 } else {
-                    $html.removeClass('no-responsive-menu').addClass('responsive-menu');
+                    //$html.removeClass('no-responsive-menu').addClass('responsive-menu');
                 }
             }
 
@@ -106,16 +87,29 @@
 
                 // Delete current timelinemax
                 if (timeline) {
+                    TweenMax.set([$menu, opt.$site], {
+                        clearProps: "all"
+                    });
                     timeline.kill();
                 }
 
                 // Recreate a new timelinemax
                 timeline = new TimelineMax({
                     paused: true,
+                    onStart: function () {
+                        $window.trigger('extra:menu:ShowStart');
+                    },
+                    onComplete: function () {
+                        $window.trigger('extra:menu:ShowComplete');
+                    },
                     onReverseComplete: function () {
                         $window.trigger('extra:menu:HideComplete');
                     }
                 });
+
+                if(!smallBreakpoint && !opt.everySizes) {
+                    return;
+                }
 
                 // Prepended timeline
                 if (opt.prependTimeline) {
@@ -135,7 +129,7 @@
                 }
 
                 // TIMELINE
-                timeline.to($menu.show(), 0.4, {
+                timeline.to($menu, 0.4, {
                     x: 0,
                     ease: Quad.EaseOut
                 });
@@ -144,12 +138,12 @@
                         x: $menu.outerWidth() + 'px',
                         ease: Quad.EaseOut,
                         onComplete: function () {
-                            $window.trigger('extra:menu:ShowComplete');
+                            update();
                         }
                     }, '-=0.3');
                 } else {
                     timeline.addCallback(function () {
-                        $window.trigger('extra:menu:ShowComplete');
+                        update();
                     });
                 }
 
@@ -168,16 +162,17 @@
             $window.
                 // @fast: false = hide with animation, true = hide instantaneously
                 on('extra:menu:hide', function (event, fast) {
-                    hideMenu(fast || true);
+                    hideMenu(fast);
                 })
                 // @fast: false = hide with animation, true = hide instantaneously
                 .on('extra:menu:show', function (event, fast) {
-                    showMenu(fast || true);
+                    showMenu(fast);
                 });
 
             $window.on(opt.resizeEvent, function () {
-                hideMenu(true);
+                smallBreakpoint = opt.smallBreakpointCondition();
                 updateTimeline();
+                menuOpen ? showMenu(true) : hideMenu(true);
             });
 
             opt.$button.on("click", function () {
@@ -189,6 +184,8 @@
             if (opt.smallBreakpointCondition === null) {
                 opt.smallBreakpointCondition = defaultSmallBreakpointTester;
             }
+
+            smallBreakpoint = opt.smallBreakpointCondition();
 
 
             /*********************************** INITIALIZE ***********************************/
