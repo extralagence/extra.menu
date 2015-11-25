@@ -51,6 +51,7 @@
                     $html.removeClass('extra-menu-close');
                     if (fast) {
                         timeline.totalProgress(1);
+						$window.trigger('extra:menu:ShowComplete');
                     } else {
                         timeline.play();
                     }
@@ -68,6 +69,7 @@
                 $window.trigger('extra:menu:HideStart');
                 if (fast) {
                     timeline.totalProgress(0);
+					$window.trigger('extra:menu:HideComplete');
                 } else {
                     timeline.reverse();
                 }
